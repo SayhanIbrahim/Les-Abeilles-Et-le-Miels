@@ -61,8 +61,6 @@ def avrfitnessdict(generation):
 
 
 def namegenerator(num, generation):
-    if generation != 0:
-        num = num
     namelist = []
     for i in range(num):
         name = f"abeille {generation} {i}"

@@ -62,8 +62,6 @@ def avrfitnessdict(generation):  # for calculate the average length of populatio
 
 
 def namegenerator(num, generation):  # for create name list of abeilles for each generation
-    if generation != 0:
-        num = 2 * num
     namelist = []
     for i in range(num):
         name = f"abeille {generation} {i}"
