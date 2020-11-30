@@ -1,28 +1,20 @@
 import pandas as pd
 from random import shuffle, choice
 import copy
-import itertools
 import random
 import sys
 import matplotlib.path as mpath
 import matplotlib.pyplot as plt
 from openpyxl import Workbook
 
-sys.setrecursionlimit(10 ** 9)
-
+# sys.setrecursionlimit(10 ** 9)
+numbebe = 20
+mutasyon_ratio = 20
+demadegeneration = 1000
 cordinatlist = []
 abeillelist = []
 lengthlist = []
-gennnlist = []
 fitnesavrdict = {}
-bebenum = 10
-
-wb = Workbook()
-ws = wb.active
-ws.title = "Abeilles et Fleurs"
-ws.append(['name', 'lenght', 'gen'])
-ws1 = wb.create_sheet("Generation")
-ws1.append(['Generations Length Average'])
 
 
 def CoordiateListPlants():
@@ -40,22 +32,20 @@ class Abeille(object):
 
 def generationg():
     generation = 0
-
-    while generation < 1500:
+    while generation < demadegeneration:
         if generation == 0:
             namelist = namegenerator(100, generation)
-            createAbeille(namelist)
+            createAbeille(namelist, generation)
             createRootAbeille()
             lenRootAbeille()
-            mutasyonLenghtlist()
             avrfitnessdict(generation)
         else:
-            namelist = namegenerator(bebenum, generation)
-            createAbeille(namelist)
+            namelist = namegenerator(numbebe, generation)
+            createAbeille(namelist, generation)
             crossover(generation)
-            mutasyonLenghtlist()
-            avrfitnessdict(generation)
+            mutasyonLenghtlist(generation)
             selection()
+            avrfitnessdict(generation)
         generation += 1
         print(generation)
     finish()
@@ -66,12 +56,13 @@ def avrfitnessdict(generation):
     poplengthlist = poplengthlist[:100]
     popavr = sum(poplengthlist) / 100
     fitnesavrdict[generation] = popavr
-    ws1.append([popavr])
-    if generation > 80 and fitnesavrdict[generation - 30] == popavr:
-        finish()
+    # if generation > 1000 and fitnesavrdict[generation - 500] == popavr:
+    #     finish()
 
 
 def namegenerator(num, generation):
+    if generation != 0:
+        num = num
     namelist = []
     for i in range(num):
         name = f"abeille {generation} {i}"
@@ -79,8 +70,9 @@ def namegenerator(num, generation):
     return namelist
 
 
-def createAbeille(namelist):
-    for i in range(len(namelist)):
+def createAbeille(namelist, generation):
+    x = len(namelist)
+    for i in range(x):
         name = Abeille()
         setattr(name, 'name', namelist[i])
         abeillelist.append(name)
@@ -91,23 +83,22 @@ def createRootAbeille():
         x = [i for i in range(len(cordinatlist))]
         shuffle(x)
         setattr(abeillelist[i], 'gen', x)
-        setattr(abeillelist[i], 'mutasyonNum', 0)
 
 
 def selection():
+    print(len(lengthlist))
     poplengthlist = sorted(lengthlist)
-    i = 0
-    for i in range(bebenum):
+    for i in range(numbebe):
         indis = lengthlist.index(poplengthlist.pop())
         del abeillelist[indis]
-        length = lengthlist[indis]
-        lengthlist.remove(length)
+        lengthlist.remove(lengthlist[indis])
+    print(len(lengthlist))
 
 
 def lenghtroot(root):
     entre = (500, 500)
     lenght = 0
-    for j in range(len(cordinatlist) + 1):
+    for j in range(len(cordinatlist)+1):
         if j == 0:
             position1 = entre
             position2 = root[j]
@@ -139,44 +130,53 @@ def lenRootAbeille():
         lenght = round(lenghtroot(root), 3)
         setattr(abeillelist[i], 'lenght', lenght)
         lengthlist.append(lenght)
-        writeexcel(i)
+        if i == 0:
+            plotrootabeille(0)
+        else:
+            continue
 
 
 def crossover(generation):
     x = sorted(lengthlist)
     x = x[0:100]
     count = 0
-    for i in range(bebenum):
-        indis3 = 100 + i
+    for i in range(numbebe//2):
+        indis3 = 100 + 2 * i
+        indis4 = indis3 + 1
         y = x[count]
-        z = x[-(count + 1)]
+        z = x[count + 1]
         indis1 = lengthlist.index(y)
         indis2 = lengthlist.index(z)
-        genbebe = chainfinder(indis1, indis2)
-        setattr(abeillelist[indis3], 'gen', genbebe)
-        num = mutasyonNumChoise(indis1, indis2)
-        setattr(abeillelist[indis3], 'mutasyonNum', num)
-        root = abeillelist[indis3].gen
-        lenght = round(lenghtroot(root), 3)
-        lengthlist.append(lenght)
-        setattr(abeillelist[indis3], 'lenght', lenght)
-        writeexcel(indis3)
-        count += 1
+        genlistbebe = chainfinder(indis1, indis2)
+        genbebe1 = genlistbebe[0]
+        genbebe2 = genlistbebe[1]
+        savebebe(indis3, genbebe1)
+        savebebe(indis4, genbebe2)
+        count += 2
+
+
+def savebebe(indis, genbebe):
+    setattr(abeillelist[indis], 'gen', genbebe)
+    root = abeillelist[indis].gen
+    lenght = round(lenghtroot(root), 3)
+    lengthlist.append(lenght)
+    setattr(abeillelist[indis], 'lenght', lenght)
 
 
 def chainfinder(indis1, indis2):
     gen1 = abeillelist[indis1].gen
     gen2 = abeillelist[indis2].gen
-    leng1 = abeillelist[indis1].lenght
     numlist = list(range(len(cordinatlist)))
+    chainelist = []
+
     if gen1 == gen2:
         gen1 = list(reversed(gen1))
         setattr(abeillelist[indis1], 'gen', gen1)
         gen2 = gen2
-    chainelist = []
+
     while len(numlist) > 0:
-        num = choice(numlist)
         chaine = []
+        num = choice(numlist)
         if gen1[num] == gen2[num]:
             chaine.append(gen1[num])
             try:
@@ -199,115 +199,71 @@ def chainfinder(indis1, indis2):
                     numlist.remove(num)
                 except:
                     continue
-        chainelist.append(chaine)
-    if len(chainelist) < 2 or len(chainelist) > len(cordinatlist)//2:
+                chainelist.append(chaine)
+    if len(chainelist) < 2 or (len(chainelist) > len(cordinatlist)//2):
         gen3 = gencrossover3(indis1, indis2)
-        print('gen3')
-        # gen3 = list(reversed(gen1))
-        return (gen3)
+        gen4 = gencrossover3(indis2, indis1)
+        return [gen3, gen4]
+
     chaine = random.choice(chainelist)
     chane1 = copy.deepcopy(chaine)
-    gen = gencrossover(chane1, indis1)
-    leng = lenghtroot(gen)
-    if leng < leng1:
-        return (gen)
+    genbebe1 = gencrossover(chane1, indis1)
     chane2 = copy.deepcopy(chaine)
-    gen = gencrossover1(chane2, indis2)
-    leng = lenghtroot(gen)
-    if leng < leng1:
-        return (gen)
-    gen = mutasyon(indis1)
-    return (gen)
+    genbebe2 = gencrossover1(chane2, indis2)
+    return [genbebe1, genbebe2]
 
 
-def mutasyonLenghtlist():
+def mutasyonLenghtlist(generation):
     x = sorted(lengthlist)
-    for i in range(100):
-        y = x[i]
-        indis = lengthlist.index(y)
-        mutsayonNumAugmentattion(indis)
+    for i in range(mutasyon_ratio):
+        indis = lengthlist.index(x[-i])
+        mutasyon(indis, generation)
 
 
-def mutsayonNumAugmentattion(indis):
-    ajt = random.choice(range(0, 5))
-    num = abeillelist[indis].mutasyonNum + ajt
-    mutsayonDecision(num, indis)
-
-
-def mutsayonDecision(num, indis):
-    if num >= 20:
-        num = num - 10
-        setattr(abeillelist[indis], 'mutasyonNum', num)
-        mutasyon(indis)
+def mutasyon(indis, generation):
+    if generation > 501 and fitnesavrdict[generation - 200] == fitnesavrdict[generation - 1]:
+        gen = gencrossover2(indis)
+        savemutasyongen(indis, gen)
     else:
-        setattr(abeillelist[indis], 'mutasyonNum', num)
+        liste2 = random.sample(range(len(cordinatlist)), 2)
+        gen = gencrossover(liste2, indis)
+        savemutasyongen(indis, gen)
 
 
-def mutasyonNumChoise(indis1, indis2):
-    num1 = abeillelist[indis1].mutasyonNum
-    num2 = abeillelist[indis2].mutasyonNum
-    if num1 > num2:
-        return num1
-    else:
-        return num2
-
-
-def mutasyonSet(count):
-    liste = [i for i in range(len(cordinatlist))]
-    liste2 = list(itertools.permutations(liste, r=count + 2))
-    return (liste2)
-
-
-def mutasyon(indis):
-    boelian = True
-    gen = abeillelist[indis].gen
-    leng1 = abeillelist[indis].lenght
-    count = 0
-    liste2 = mutasyonSet(count)
-    while boelian == True:
-        # if count == 250:
-        #     boelian = False
-        #     savemutasyongen(indis, gen)
-        #     return (gen)
-        if gen in gennnlist:
-            print('count', count)
-            # boelian = True
-            gen = gencrossover2(indis)
-            leng = lenghtroot(gen)
-            # print(leng)
-            count = count + 1
-            # if leng < leng1:
-            boelian = False
-            savemutasyongen(indis, gen)
-            print(gen)
-            print('succes')
-            return (gen)
-            # else:
-            #     boelian = True
-        if len(liste2) == 0:
-            boelian = True
-            gen = abeillelist[indis].gen
-            gennnlist.append(gen)
-        else:
-            chaine = list(random.choice(liste2))
-            liste2.remove(tuple(chaine))
-            gen = gencrossover(chaine, indis)
-            leng = lenghtroot(gen)
-            if leng < leng1:
-                boelian = False
-                savemutasyongen(indis, gen)
-                return (gen)
-            else:
-                boelian = True
-
-
-def savemutasyongen(indis, gen):
+def savemutasyongen(indis, gen):  # save properties of abeille object after mutasyon
     setattr(abeillelist[indis], 'gen', gen)
     root = abeillelist[indis].gen
     lenght = round(lenghtroot(root), 3)
     lengthlist.remove(lengthlist[indis])
     lengthlist.insert(indis, lenght)
     setattr(abeillelist[indis], 'lenght', lenght)
+
+
+def gencrossover2(indis):
+    num1 = 0
+    num2 = 0
+    gen = abeillelist[indis].gen
+    num = choice(range(3, 15))
+    boelen = True
+    while boelen == True:
+        liste = random.sample(range(len(cordinatlist) - num), 2)
+        liste2 = sorted(liste)
+        num1 = liste2[0]
+        num2 = liste2[1]
+        if num2 - num1 > num:
+            boelen = False
+        else:
+            boelen = True
+    i = 0
+    while i < num:
+        genom1 = gen[num1 + i]
+        genom2 = gen[num2 + i]
+        gen.remove(genom1)
+        gen.remove(genom2)
+        gen.insert((num1 + i), genom2)
+        gen.insert((num2 + i), genom1)
+        i += 1
+    return (gen)
 
 
 def gencrossover(chaine, indis):
@@ -340,35 +296,10 @@ def gencrossover1(chaine, indis):
     return (genenfant)
 
 
-def gencrossover2(indis):
-    gen = abeillelist[indis].gen
-    num = choice(range(3, 9))
-    boelen = True
-    while boelen == True:
-        liste = random.sample(range(len(cordinatlist) - num), 2)
-        liste2 = sorted(liste)
-        num1 = liste2[0]
-        num2 = liste2[1]
-        if num2 - num1 > num:
-            boelen = False
-        else:
-            boelen = True
-    i = 0
-    while i < num:
-        genom1 = gen[num1 + i]
-        genom2 = gen[num2 + i]
-        gen.remove(genom1)
-        gen.remove(genom2)
-        gen.insert((num1 + i), genom2)
-        gen.insert((num2 + i), genom1)
-        i += 1
-    return (gen)
-
-
-def gencrossover3(indis1, indis2):
-    gen1 = abeillelist[indis1].gen
-    gen2 = abeillelist[indis2].gen
-    num = len(cordinatlist) // 2
+def gencrossover3(indis1, indis2):  # crosover function if there is`nt
+    gen1 = abeillelist[indis1].gen  # any sequence between parents
+    gen2 = abeillelist[indis2].gen  # because of for create new abeille
+    num = len(cordinatlist) // 2    # who has a different gen from his parents
     genP11 = gen1[:num]
     genP12 = copy.deepcopy(gen1[num:])
     genP21 = gen2[:num]
@@ -388,11 +319,11 @@ def gencrossover3(indis1, indis2):
 
 
 def plotrootabeille(indis):
-    gen = abeillelist[indis].gen
+    gen = list(abeillelist[indis].gen)
     name = abeillelist[indis].name
     lenght = abeillelist[indis].lenght
     fig, ax = plt.subplots()
-    fig.suptitle(f'name: {name} --- lenght: {lenght}')
+    fig.suptitle(f'name: {name} --- length: {lenght}')
     Path = mpath.Path
     path_data = []
     for i in range(len(gen)):
@@ -420,30 +351,35 @@ def plotpopulatinFitness():
     plt.show()
 
 
-def writeexcel(indis):
-    genlist = []
-    name = abeillelist[indis].name
-    lenght = abeillelist[indis].lenght
-    gen = list(abeillelist[indis].gen)
-    for j in gen:
-        num = str(j)
-        genlist.append(num)
-    genom = ', '.join(genlist)
-    ws.append([name, lenght, genom])
+def writeexel():
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Abeilles et Fleurs"
+    ws.append(['name', 'lenght', 'gen'])
+    for i in range(len(abeillelist)):
+        genlist = []
+        name = abeillelist[i].name
+        lenght = abeillelist[i].lenght
+        gen = list(abeillelist[i].gen)
+        for j in gen:
+            num = str(j)
+            genlist.append(num)
+        genom = ', '.join(genlist)
+        ws.append([name, lenght,  genom])
+    ws1 = wb.create_sheet("Generation")
+    ws1.append(['Distance average of generations'])
+    for i in range(len(fitnesavrdict)):
+        average = fitnesavrdict[i]
+        ws1.append([average])
+    wb.save("Abeilles et Fleurs.xlsx")
 
 
 def finish():
-    poplengthlist = sorted(lengthlist)
-    poplengthlist = poplengthlist[:100]
-    popavr = sum(poplengthlist) / 100
-    print(popavr)
-    x = sorted(lengthlist)
-    indis1 = lengthlist.index(x[0])
-    print(abeillelist[indis1].gen)
+    print('average length of population: ', fitnesavrdict[demadegeneration-1])
     plotpopulatinFitness()
-    plotrootabeille(0)
-    plotrootabeille(indis1)
-    wb.save("Abeilles et Fleurs.xlsx")
+    plotrootabeille(-1)
+    writeexel()
+    print(len(lengthlist))
     exit()
 
 
